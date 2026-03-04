@@ -260,6 +260,23 @@ const Apps = (() => {
     body.innerHTML = `<video src="${url}" controls style="width:100%;height:100%;background:#000" autoplay></video>`;
   }
 
-  return { openNote, openLink, openPDF, openVideo };
+  /* --------- IMAGE VIEWER --------- */
+  function openImage(item, createWindow) {
+    const url = item.data?.url || '';
+    const winEl = createWindow({
+      title: item.label,
+      icon: item.icon || '🖼️',
+      width: 700, height: 520,
+      itemId: item.id,
+    });
+
+    const body = winEl.querySelector('.win-body');
+    body.style.cssText = 'padding:0;background:#111;display:flex;align-items:center;justify-content:center;overflow:hidden';
+    body.innerHTML = url
+      ? `<img src="${url}" style="max-width:100%;max-height:100%;object-fit:contain;display:block" />`
+      : `<div style="color:#aaa">Sin imagen</div>`;
+  }
+
+  return { openNote, openLink, openPDF, openVideo, openImage };
 
 })();

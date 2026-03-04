@@ -18,6 +18,7 @@ const Desktop = (() => {
     note:   '📝',
     pdf:    '📄',
     video:  '🎬',
+    image:  '🖼️',
   };
 
   /* ---------- INIT ---------- */
@@ -194,6 +195,7 @@ const Desktop = (() => {
     else if (item.type === 'link')   Apps.openLink(item, createWindow);
     else if (item.type === 'pdf')    Apps.openPDF(item, createWindow);
     else if (item.type === 'video')  Apps.openVideo(item, createWindow);
+    else if (item.type === 'image')  Apps.openImage(item, createWindow);
   }
 
   /* ---------- FOLDER WINDOW ---------- */
@@ -221,6 +223,14 @@ const Desktop = (() => {
         showCtxMenu(e.clientX, e.clientY, child.id, true, folderId, winId);
       });
       grid.appendChild(el);
+    });
+
+    // Clic derecho en el área vacía de la carpeta
+    body.addEventListener('contextmenu', e => {
+      if (e.target.closest('.icon')) return; // el icono ya tiene su propio listener
+      e.preventDefault();
+      e.stopPropagation();
+      showCtxMenu(e.clientX, e.clientY, null, false, folderId, winId);
     });
 
     // Drop zone: drag desktop icon into folder
@@ -460,12 +470,14 @@ const Desktop = (() => {
       addSep();
       addItem('🗑️', 'Eliminar', 'danger', () => deleteItem(item.id, folderId, winId));
     } else if (!isStart) {
-      // Right-click on desktop
+      // Right-click on desktop o carpeta
       addItem('📁', 'Nueva carpeta',  '', () => promptNew('folder', folderId, winId));
       addItem('📝', 'Nuevo apunte',   '', () => promptNew('note',   folderId, winId));
       addItem('🔗', 'Nuevo link',     '', () => promptNew('link',   folderId, winId));
       addItem('📄', 'Nuevo PDF',      '', () => promptNew('pdf',    folderId, winId));
       addItem('🎬', 'Nuevo vídeo',    '', () => promptNew('video',  folderId, winId));
+      addSep();
+      addItem('📎', 'Subir archivo',  '', () => promptUpload(folderId, winId));
     } else {
       // Start menu
       addItem('📁', 'Nueva carpeta',  '', () => promptNew('folder'));
@@ -474,6 +486,7 @@ const Desktop = (() => {
       addItem('📄', 'Nuevo PDF',      '', () => promptNew('pdf'));
       addItem('🎬', 'Nuevo vídeo',    '', () => promptNew('video'));
       addSep();
+      addItem('📎', 'Subir archivo',  '', () => promptUpload());
       addItem('🖼️', 'Cambiar fondo',  '', () => promptBackground());
     }
 
@@ -617,6 +630,71 @@ const Desktop = (() => {
         localStorage.setItem('webos_bg', url);
       }
     });
+  }
+
+  function promptUpload(parentFolder, winId) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt,.md,.pdf,.png,.jpg,.jpeg,.gif,.webp,.svg,.mp4,.webm';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if (!file) { input.remove(); return; }
+
+      const ext  = file.name.split('.').pop().toLowerCase();
+      const name = file.name.replace(/\.[^/.]+$/, '');
+
+      // Detectar tipo
+      let type, icon;
+      if (['txt','md'].includes(ext))                   { type = 'note';  icon = '📝'; }
+      else if (ext === 'pdf')                           { type = 'pdf';   icon = '📄'; }
+      else if (['png','jpg','jpeg','gif','webp','svg'].includes(ext)) { type = 'image'; icon = '🖼️'; }
+      else if (['mp4','webm'].includes(ext))            { type = 'video'; icon = '🎬'; }
+      else                                              { type = 'note';  icon = '📄'; }
+
+      const MAX_SIZE = 4 * 1024 * 1024; // 4MB límite para localStorage
+      if (file.size > MAX_SIZE) {
+        alert(`El archivo es demasiado grande (${(file.size/1024/1024).toFixed(1)}MB). Máximo 4MB para almacenamiento local.`);
+        input.remove(); return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        const result = e.target.result;
+        let data = {};
+
+        if (type === 'note') {
+          data = { content: result }; // texto plano
+        } else {
+          data = { url: result }; // base64 data URL
+        }
+
+        const newItem = {
+          id: uid(), type, label: name, icon,
+          x: 20 + Math.floor(Math.random() * 150),
+          y: 20 + Math.floor(Math.random() * 150),
+          data,
+          parentFolder: parentFolder || null,
+        };
+        items.push(newItem);
+        save();
+
+        if (parentFolder && winId) {
+          const win = windows.find(w => w.id === winId);
+          if (win) renderFolderContent(win.el.querySelector('.win-body'), parentFolder, winId);
+        } else {
+          renderDesktop();
+        }
+        input.remove();
+      };
+
+      if (type === 'note') reader.readAsText(file);
+      else reader.readAsDataURL(file);
+    });
+
+    input.click();
   }
 
   function deleteItem(itemId, parentFolder, winId) {
