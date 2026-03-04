@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mi WebOS</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- DESKTOP -->
+  <div id="desktop">
+    <div id="desktop-icons"></div>
+    <div id="selection-box"></div>
+  </div>
+
+  <!-- TASKBAR -->
+  <div id="taskbar">
+    <div id="taskbar-start" title="Menú">🖥️</div>
+    <div id="taskbar-separator"></div>
+    <div id="taskbar-windows"></div>
+    <div id="drive-status"></div>
+    <button id="drive-btn" title="Conectar con Google Drive">☁️ Conectar Drive</button>
+    <div id="taskbar-clock"></div>
+  </div>
+
+  <!-- CONTEXT MENU -->
+  <div id="ctx-menu"></div>
+
+  <!-- SCRIPTS -->
+  <script src="js/apps/apps.js"></script>
+  <script src="js/desktop.js"></script>
+  <script src="js/drive.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      Desktop.init();
+      // Restore background
+      const bg = localStorage.getItem('webos_bg');
+      if (bg) document.getElementById('desktop').style.backgroundImage = `url('${bg}')`;
+      // Init Drive (carga librerías de Google en segundo plano)
+      Drive.init();
+    });
+  </script>
+</body>
+</html>
